@@ -39,9 +39,9 @@ namespace Flow.Launcher.Plugin.PluginsManager
             contextMenu = new ContextMenu(Context);
             pluginManager = new PluginsManager(Context, Settings);
             _manifestUpdateTask = pluginManager.UpdateManifest().ContinueWith(_ =>
-             {
-                 lastUpdateTime = DateTime.Now;
-             }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            {
+                lastUpdateTime = DateTime.Now;
+            }, TaskContinuationOptions.OnlyOnRanToCompletion);
 
             return Task.CompletedTask;
         }
@@ -50,14 +50,12 @@ namespace Flow.Launcher.Plugin.PluginsManager
         {
             return contextMenu.LoadContextMenus(selectedResult);
         }
-        
+
         private Task _manifestUpdateTask = Task.CompletedTask;
 
         public async Task<List<Result>> QueryAsync(Query query, CancellationToken token)
         {
-            var search = query.Search.ToLower();
-
-            if (string.IsNullOrWhiteSpace(search))
+            if (string.IsNullOrWhiteSpace(query.Search))
                 return pluginManager.GetDefaultHotKeys();
 
             if ((DateTime.Now - lastUpdateTime).TotalHours > 12 && _manifestUpdateTask.IsCompleted) // 12 hours
@@ -68,14 +66,14 @@ namespace Flow.Launcher.Plugin.PluginsManager
                 }, TaskContinuationOptions.OnlyOnRanToCompletion);
             }
 
-            return search switch
+            return query.FirstSearch.ToLower() switch
             {
-                var s when s.StartsWith(Settings.HotKeyInstall) => await pluginManager.RequestInstallOrUpdate(s, token),
-                var s when s.StartsWith(Settings.HotkeyUninstall) => pluginManager.RequestUninstall(s),
-                var s when s.StartsWith(Settings.HotkeyUpdate) => await pluginManager.RequestUpdate(s, token),
+                Settings.HotKeyInstall => await pluginManager.RequestInstallOrUpdate(query.SecondToEndSearch, token),
+                Settings.HotkeyUninstall => pluginManager.RequestUninstall(query.SecondToEndSearch),
+                Settings.HotkeyUpdate=> await pluginManager.RequestUpdate(query.SecondToEndSearch, token),
                 _ => pluginManager.GetDefaultHotKeys().Where(hotkey =>
                 {
-                    hotkey.Score = StringMatcher.FuzzySearch(search, hotkey.Title).Score;
+                    hotkey.Score = StringMatcher.FuzzySearch(query.Search, hotkey.Title).Score;
                     return hotkey.Score > 0;
                 }).ToList()
             };
