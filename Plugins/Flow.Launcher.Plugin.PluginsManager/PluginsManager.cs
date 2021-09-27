@@ -80,7 +80,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
                     IcoPath = icoPath,
                     Action = _ =>
                     {
-                        Context.API.ChangeQuery("pm install ");
+                        Context.API.ChangeQuery($"{Context.CurrentPluginMetadata.ActionKeyword} install ");
                         return false;
                     }
                 },
