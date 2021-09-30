@@ -68,9 +68,10 @@ namespace Flow.Launcher.Plugin.PluginsManager
 
             return query.FirstSearch.ToLower() switch
             {
-                Settings.HotKeyInstall => await pluginManager.RequestInstallOrUpdate(query.SecondToEndSearch, token),
+                Settings.HotKeyList => await pluginManager.RequestListAsync(query.SecondToEndSearch, token),
+                Settings.HotKeyInstall => await pluginManager.RequestInstallAsync(query.SecondToEndSearch, token),
                 Settings.HotkeyUninstall => pluginManager.RequestUninstall(query.SecondToEndSearch),
-                Settings.HotkeyUpdate=> await pluginManager.RequestUpdate(query.SecondToEndSearch, token),
+                Settings.HotkeyUpdate => await pluginManager.RequestUpdateAsync(query.SecondToEndSearch, token),
                 _ => pluginManager.GetDefaultHotKeys().Where(hotkey =>
                 {
                     hotkey.Score = StringMatcher.FuzzySearch(query.Search, hotkey.Title).Score;

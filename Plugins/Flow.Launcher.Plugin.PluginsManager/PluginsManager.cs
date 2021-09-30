@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using YamlDotNet.Core.Tokens;
 
 namespace Flow.Launcher.Plugin.PluginsManager
 {
@@ -170,7 +171,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
             Context.API.RestartApp();
         }
 
-        internal async ValueTask<List<Result>> RequestUpdate(string search, CancellationToken token)
+        internal async ValueTask<List<Result>> RequestUpdateAsync(string search, CancellationToken token)
         {
             if (!pluginsManifest.UserPlugins.Any())
             {
@@ -179,16 +180,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
 
             token.ThrowIfCancellationRequested();
 
-            var uninstallSearch = search.Replace(Settings.HotkeyUpdate, string.Empty).TrimStart();
-
-            var results =
-                (from existingPlugin in Context.API.GetAllPlugins()
-                 join pluginFromManifest in pluginsManifest.UserPlugins
-                     on existingPlugin.Metadata.ID equals pluginFromManifest.ID
-                 where existingPlugin.Metadata.Version.CompareTo(pluginFromManifest.Version) <
-                       0 // if current version precedes manifest version
-                 select ConstructUpdatablePluginResult(pluginFromManifest, existingPlugin.Metadata))
-                .ToList();
+            var results = Search(await GetUpdatablePluginsAsync(token), search);
 
             if (!results.Any())
                 return new List<Result>
@@ -201,7 +193,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
                     }
                 };
 
-            return Search(results, uninstallSearch);
+            return results;
         }
 
         internal bool PluginExists(string id)
@@ -225,28 +217,54 @@ namespace Flow.Launcher.Plugin.PluginsManager
                 })
                 .ToList();
         }
-        internal async ValueTask<List<Result>> RequestInstallOrUpdate(string searchName, CancellationToken token)
+
+        private async ValueTask<IEnumerable<Result>> GetInstallablePluginsAsync(CancellationToken token)
         {
             if (!pluginsManifest.UserPlugins.Any())
             {
                 await UpdateManifest();
+                token.ThrowIfCancellationRequested();
             }
-
-            token.ThrowIfCancellationRequested();
-
             var installedPluginMeta = Context.API.GetAllPlugins().Select(x => (x.Metadata.Version, x.Metadata)).ToList();
 
-            var results =
-                pluginsManifest.UserPlugins
-                    .Where(plugin => installedPluginMeta.All(pluginMeta => plugin.ID != pluginMeta.Metadata.ID))
-                    .Select(ConstructNewPluginResult)
-                    .Concat(
-                        from meta in installedPluginMeta
-                        join plugin in pluginsManifest.UserPlugins on meta.Metadata.ID equals plugin.ID
-                        where string.Compare(plugin.Version, meta.Version, StringComparison.Ordinal) > 0
-                        select ConstructUpdatablePluginResult(plugin, meta.Metadata)
-                    );
+            return pluginsManifest.UserPlugins
+                .Where(plugin => installedPluginMeta.All(pluginMeta => plugin.ID != pluginMeta.Metadata.ID))
+                .Select(ConstructNewPluginResult);
 
+        }
+
+        private async ValueTask<IEnumerable<Result>> GetUpdatablePluginsAsync(CancellationToken token)
+        {
+            if (!pluginsManifest.UserPlugins.Any())
+            {
+                await UpdateManifest();
+                token.ThrowIfCancellationRequested();
+            }
+            
+            var installedPluginMeta = Context.API.GetAllPlugins().Select(x => (x.Metadata.Version, x.Metadata)).ToList();
+
+            return from meta in installedPluginMeta
+                join plugin in pluginsManifest.UserPlugins on meta.Metadata.ID equals plugin.ID
+                where string.Compare(plugin.Version, meta.Version, StringComparison.Ordinal) > 0
+                select ConstructUpdatablePluginResult(plugin, meta.Metadata);
+        }
+
+        internal async ValueTask<List<Result>> RequestInstallAsync(string searchName, CancellationToken token)
+        {
+            return Search(await GetInstallablePluginsAsync(token), searchName);
+        }
+        internal async ValueTask<List<Result>> RequestListAsync(string searchName, CancellationToken token)
+        {
+            if (!pluginsManifest.UserPlugins.Any())
+            {
+                await UpdateManifest();
+                token.ThrowIfCancellationRequested();
+            }
+            
+            var uninstalledPlugin = await GetInstallablePluginsAsync(token);
+            var updatablePlugin = await GetUpdatablePluginsAsync(token);
+
+            var results = uninstalledPlugin.Concat(updatablePlugin).ToList();
             return Search(results, searchName);
         }
 
@@ -324,7 +342,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
                     return ShouldHideWindow;
                 }
 
-                Application.Current.MainWindow.Hide();
+                Application.Current.MainWindow?.Hide();
                 _ = InstallOrUpdate(plugin); // No need to wait
                 return ShouldHideWindow;
             },
