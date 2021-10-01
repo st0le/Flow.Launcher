@@ -5,22 +5,19 @@ using Flow.Launcher.Infrastructure.Logger;
 using Flow.Launcher.Infrastructure.UserSettings;
 using Flow.Launcher.Plugin.PluginsManager.Models;
 using Flow.Launcher.Plugin.SharedCommands;
-using Flow.Launcher.Plugin.SharedModels;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using YamlDotNet.Core.Tokens;
 
 namespace Flow.Launcher.Plugin.PluginsManager
 {
     internal class PluginsManager
     {
-        private PluginsManifest pluginsManifest;
+        private readonly PluginsManifest pluginsManifest;
 
         private PluginInitContext Context { get; set; }
 
@@ -30,7 +27,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
 
         private bool ShouldHideWindow
         {
-            set { shouldHideWindow = value; }
+            set => shouldHideWindow = value;
             get
             {
                 var setValue = shouldHideWindow;
@@ -54,7 +51,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
         private Task _downloadManifestTask = Task.CompletedTask;
 
 
-        internal Task UpdateManifest()
+        internal Task UpdateManifestAsync()
         {
             if (_downloadManifestTask.Status == TaskStatus.Running)
             {
@@ -75,33 +72,43 @@ namespace Flow.Launcher.Plugin.PluginsManager
         {
             return new List<Result>()
             {
-                new Result()
+                new()
+                {
+                    Title = Settings.HotKeyList,
+                    IcoPath = icoPath,
+                    Action = _ =>
+                    {
+                        Context.API.ChangeQuery($"{Context.CurrentPluginMetadata.ActionKeyword} {Settings.HotKeyList} ");
+                        return false;
+                    }
+                },
+                new()
                 {
                     Title = Settings.HotKeyInstall,
                     IcoPath = icoPath,
                     Action = _ =>
                     {
-                        Context.API.ChangeQuery($"{Context.CurrentPluginMetadata.ActionKeyword} install ");
+                        Context.API.ChangeQuery($"{Context.CurrentPluginMetadata.ActionKeyword} {Settings.HotKeyInstall} ");
                         return false;
                     }
                 },
-                new Result()
+                new()
                 {
                     Title = Settings.HotkeyUninstall,
                     IcoPath = icoPath,
                     Action = _ =>
                     {
-                        Context.API.ChangeQuery("pm uninstall ");
+                        Context.API.ChangeQuery($"{Context.CurrentPluginMetadata.ActionKeyword} {Settings.HotkeyUninstall} ");
                         return false;
                     }
                 },
-                new Result()
+                new()
                 {
                     Title = Settings.HotkeyUpdate,
                     IcoPath = icoPath,
                     Action = _ =>
                     {
-                        Context.API.ChangeQuery("pm update ");
+                        Context.API.ChangeQuery($"{Context.CurrentPluginMetadata.ActionKeyword} {Settings.HotkeyUpdate} ");
                         return false;
                     }
                 }
@@ -175,7 +182,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
         {
             if (!pluginsManifest.UserPlugins.Any())
             {
-                await UpdateManifest();
+                await UpdateManifestAsync();
             }
 
             token.ThrowIfCancellationRequested();
@@ -222,7 +229,7 @@ namespace Flow.Launcher.Plugin.PluginsManager
         {
             if (!pluginsManifest.UserPlugins.Any())
             {
-                await UpdateManifest();
+                await UpdateManifestAsync();
                 token.ThrowIfCancellationRequested();
             }
             var installedPluginMeta = Context.API.GetAllPlugins().Select(x => (x.Metadata.Version, x.Metadata)).ToList();
@@ -237,16 +244,16 @@ namespace Flow.Launcher.Plugin.PluginsManager
         {
             if (!pluginsManifest.UserPlugins.Any())
             {
-                await UpdateManifest();
+                await UpdateManifestAsync();
                 token.ThrowIfCancellationRequested();
             }
-            
+
             var installedPluginMeta = Context.API.GetAllPlugins().Select(x => (x.Metadata.Version, x.Metadata)).ToList();
 
             return from meta in installedPluginMeta
-                join plugin in pluginsManifest.UserPlugins on meta.Metadata.ID equals plugin.ID
-                where string.Compare(plugin.Version, meta.Version, StringComparison.Ordinal) > 0
-                select ConstructUpdatablePluginResult(plugin, meta.Metadata);
+                   join plugin in pluginsManifest.UserPlugins on meta.Metadata.ID equals plugin.ID
+                   where string.Compare(plugin.Version, meta.Version, StringComparison.Ordinal) > 0
+                   select ConstructUpdatablePluginResult(plugin, meta.Metadata);
         }
 
         internal async ValueTask<List<Result>> RequestInstallAsync(string searchName, CancellationToken token)
@@ -257,10 +264,10 @@ namespace Flow.Launcher.Plugin.PluginsManager
         {
             if (!pluginsManifest.UserPlugins.Any())
             {
-                await UpdateManifest();
+                await UpdateManifestAsync();
                 token.ThrowIfCancellationRequested();
             }
-            
+
             var uninstalledPlugin = await GetInstallablePluginsAsync(token);
             var updatablePlugin = await GetUpdatablePluginsAsync(token);
 
