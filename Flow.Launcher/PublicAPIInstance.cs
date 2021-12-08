@@ -196,7 +196,7 @@ namespace Flow.Launcher
 
         public void OpenDirectory(string DirectoryPath, string FileName = null)
         {
-            using Process explorer = new Process();
+            using var explorer = new Process();
             var explorerInfo = _settingsVM.Settings.CustomExplorer;
             explorer.StartInfo = new ProcessStartInfo
             {
@@ -207,6 +207,22 @@ namespace Flow.Launcher
                         Path.IsPathRooted(FileName) ? FileName : Path.Combine(DirectoryPath, FileName))
             };
             explorer.Start();
+        }
+
+        public void OpenUrl(string url)
+        {
+            var browserInfo = _settingsVM.Settings.CustomBrowser;
+
+            var path = browserInfo.Path == "*" ? "" : browserInfo.Path;
+
+            if (browserInfo.OpenInTab)
+            {
+                url.OpenInBrowserTab(path, browserInfo.EnablePrivate, browserInfo.PrivateArg);
+            }else
+            {
+                url.OpenInBrowserWindow(path, browserInfo.EnablePrivate, browserInfo.PrivateArg);
+            }
+
         }
 
         public event FlowLauncherGlobalKeyboardEventHandler GlobalKeyboardEvent;
