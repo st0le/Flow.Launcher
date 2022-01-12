@@ -198,7 +198,7 @@ namespace Flow.Launcher.Core.Plugin
 
                 metadata.QueryCount += 1;
                 metadata.AvgQueryTime =
-                    metadata.QueryCount == 1 ? milliseconds : (metadata.AvgQueryTime + milliseconds) / 2;
+                    metadata.QueryCount == 1 ? milliseconds : (metadata.AvgQueryTime * (metadata.QueryCount - 1) + milliseconds) / metadata.QueryCount;
                 token.ThrowIfCancellationRequested();
             }
             catch (OperationCanceledException)
