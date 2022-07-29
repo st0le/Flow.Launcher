@@ -16,11 +16,11 @@ namespace Flow.Launcher.Plugin
         public string Description { get; set; }
         public string Website { get; set; }
         public bool Disabled { get; set; }
-        public string ExecuteFilePath { get; private set;}
+        public string ExecuteFilePath { get; private set; }
 
         public string ExecuteFileName { get; set; }
 
-        public string ExecuteArguments { get; set; }
+        public List<string> ExecuteArguments { get; set; }
 
         public string PluginDirectory
         {
@@ -28,7 +28,16 @@ namespace Flow.Launcher.Plugin
             internal set
             {
                 _pluginDirectory = value;
-                ExecuteFilePath = Path.Combine(value, ExecuteFileName);
+                // if the file exists in the plugin directory, prepend the plugin directory
+                // otherwise assume it's in the PATH
+                if (File.Exists(Path.Combine(value, ExecuteFileName)))
+                {
+                    ExecuteFilePath = Path.Combine(value, ExecuteFileName);
+                }
+                else
+                {
+                    ExecuteFilePath = ExecuteFileName;
+                }
                 IcoPath = Path.Combine(value, IcoPath);
             }
         }
@@ -37,8 +46,8 @@ namespace Flow.Launcher.Plugin
 
         public List<string> ActionKeywords { get; set; }
 
-        public string IcoPath { get; set;}
-        
+        public string IcoPath { get; set; }
+
         public override string ToString()
         {
             return Name;

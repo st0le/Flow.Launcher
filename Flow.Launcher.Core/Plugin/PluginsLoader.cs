@@ -203,7 +203,7 @@ namespace Flow.Launcher.Core.Plugin
                 .Where(o => o.Language.ToUpper() == AllowedLanguage.Executable)
                 .Select(metadata => new PluginPair
                 {
-                    Plugin = new ExecutablePlugin(metadata.ExecuteFilePath, metadata.ExecuteArguments), Metadata = metadata
+                    Plugin = new ExecutablePlugin(metadata.PluginDirectory, metadata.ExecuteFilePath, metadata.ExecuteArguments), Metadata = metadata
                 });
         }
     }

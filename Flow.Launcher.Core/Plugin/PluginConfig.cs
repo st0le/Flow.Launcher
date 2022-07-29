@@ -77,7 +77,7 @@ namespace Flow.Launcher.Core.Plugin
 
                         // If metadata's version greater than each duplicate's version, CompareTo > 0
                         var count = group.Where(x => metadata.Version.CompareTo(x.Version) > 0).Count();
-                        
+
                         // Only add if the meatadata's version is the highest of all duplicates in the group
                         if (count == group.Count() - 1)
                         {
@@ -89,7 +89,7 @@ namespace Flow.Launcher.Core.Plugin
                         }
                     }
                 }
-                
+
                 if (!duplicatesExist)
                     unique_list.Add(metadata);
             }
@@ -128,13 +128,26 @@ namespace Flow.Launcher.Core.Plugin
                 return null;
             }
 
-            if (!File.Exists(metadata.ExecuteFilePath))
+            if (!File.Exists(metadata.ExecuteFilePath) && !FileExistsInPath(metadata.ExecuteFilePath))
             {
-                Log.Error($"|PluginConfig.GetPluginMetadata|execute file path didn't exist <{metadata.ExecuteFilePath}> for conifg <{configPath}");
+                Log.Error($"|PluginConfig.GetPluginMetadata|execute file path didn't exist <{metadata.ExecuteFilePath}> for config <{configPath}");
                 return null;
             }
 
             return metadata;
+        }
+
+        private static bool FileExistsInPath(string filename)
+        {
+            string paths = Environment.ExpandEnvironmentVariables(Environment.GetEnvironmentVariable("PATH"));
+            foreach (string path in paths.Split(";"))
+            {
+                if (File.Exists(Path.Combine(path, filename)))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
