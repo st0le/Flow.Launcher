@@ -20,6 +20,8 @@ namespace Flow.Launcher.Plugin
 
         public string ExecuteFileName { get; set; }
 
+        public string ExecuteArguments { get; set; }
+
         public string PluginDirectory
         {
             get { return _pluginDirectory; }
